@@ -4,6 +4,7 @@ from .yfin_utils import *
 from .stockstats_utils import *
 from .googlenews_utils import *
 from .finnhub_utils import get_data_in_range
+from .providers import DataProviderFactory
 from dateutil.relativedelta import relativedelta
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -14,6 +15,17 @@ from tqdm import tqdm
 import yfinance as yf
 from openai import OpenAI
 from .config import get_config, set_config, DATA_DIR
+
+
+def _get_data_provider():
+    """
+    Get the configured data provider instance.
+    
+    Returns:
+        DataProvider instance based on current configuration
+    """
+    config = get_config()
+    return DataProviderFactory.get_provider(config=config)
 
 
 def get_finnhub_news(
@@ -40,7 +52,9 @@ def get_finnhub_news(
     before = start_date - relativedelta(days=look_back_days)
     before = before.strftime("%Y-%m-%d")
 
-    result = get_data_in_range(ticker, before, curr_date, "news_data", DATA_DIR)
+    # Use the abstract data provider instead of direct Finnhub access
+    provider = _get_data_provider()
+    result = provider.get_news(ticker, before, curr_date)
 
     if len(result) == 0:
         return ""
@@ -79,7 +93,9 @@ def get_finnhub_company_insider_sentiment(
     before = date_obj - relativedelta(days=look_back_days)
     before = before.strftime("%Y-%m-%d")
 
-    data = get_data_in_range(ticker, before, curr_date, "insider_senti", DATA_DIR)
+    # Use the abstract data provider instead of direct Finnhub access
+    provider = _get_data_provider()
+    data = provider.get_insider_sentiment(ticker, before, curr_date)
 
     if len(data) == 0:
         return ""
@@ -120,7 +136,9 @@ def get_finnhub_company_insider_transactions(
     before = date_obj - relativedelta(days=look_back_days)
     before = before.strftime("%Y-%m-%d")
 
-    data = get_data_in_range(ticker, before, curr_date, "insider_trans", DATA_DIR)
+    # Use the abstract data provider instead of direct Finnhub access
+    provider = _get_data_provider()
+    data = provider.get_insider_transactions(ticker, before, curr_date)
 
     if len(data) == 0:
         return ""

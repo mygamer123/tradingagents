@@ -5,6 +5,14 @@ from .reddit_utils import fetch_top_from_category
 from .stockstats_utils import StockstatsUtils
 from .yfin_utils import YFinanceUtils
 
+# Import the provider system
+from .providers import (
+    DataProvider,
+    FinnhubProvider,
+    TwelveDataProvider,
+    DataProviderFactory,
+)
+
 from .interface import (
     # News and sentiment functions
     get_finnhub_news,
@@ -26,6 +34,11 @@ from .interface import (
 )
 
 __all__ = [
+    # Provider system
+    "DataProvider",
+    "FinnhubProvider",
+    "TwelveDataProvider", 
+    "DataProviderFactory",
     # News and sentiment functions
     "get_finnhub_news",
     "get_finnhub_company_insider_sentiment",

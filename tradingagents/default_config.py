@@ -19,4 +19,7 @@ DEFAULT_CONFIG = {
     "max_recur_limit": 100,
     # Tool settings
     "online_tools": True,
+    # Data provider settings
+    "data_provider": "finnhub",  # Options: "finnhub", "twelvedata"
+    "twelvedata_api_key": "",  # TwelveData API key (if using TwelveData provider)
 }
