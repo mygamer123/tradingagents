@@ -8,6 +8,8 @@ DEFAULT_CONFIG = {
         os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
         "dataflows/data_cache",
     ),
+    # Data provider settings
+    "data_provider": "finnhub",  # Default data provider: finnhub, twelvedata, etc.
     # LLM settings
     "llm_provider": "openai",
     "deep_think_llm": "o4-mini",
