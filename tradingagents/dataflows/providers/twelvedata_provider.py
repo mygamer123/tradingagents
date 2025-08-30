@@ -37,7 +37,7 @@ class TwelveDataProvider(DataProvider):
         self.base_url = "https://api.twelvedata.com"
         self.session = requests.Session()
         self.last_request_time = 0
-        self.rate_limit_delay = 1.0 / 600  # 600 calls per second (0.00167 seconds delay)
+        self.rate_limit_delay = 60.0 / 600  # 600 calls per minute (0.1 seconds delay)
         
         if not self.api_key:
             logger.warning("TwelveData API key not configured. Set TWELVEDATA_API_KEY environment variable.")
