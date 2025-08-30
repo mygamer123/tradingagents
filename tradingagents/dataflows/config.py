@@ -11,6 +11,9 @@ def initialize_config():
     global _config, DATA_DIR
     if _config is None:
         _config = default_config.DEFAULT_CONFIG.copy()
+        # Add data provider configuration if not present
+        if "data_provider" not in _config:
+            _config["data_provider"] = "finnhub"  # Default to Finnhub for backward compatibility
         DATA_DIR = _config["data_dir"]
 
 
