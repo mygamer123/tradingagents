@@ -8,8 +8,11 @@ DEFAULT_CONFIG = {
         os.path.abspath(os.path.join(os.path.dirname(__file__), ".")),
         "dataflows/data_cache",
     ),
-    # Data provider settings
-    "data_provider": "finnhub",  # Default data provider: finnhub, twelvedata, etc.
+    # Data provider settings - Configure which data source to use for financial data
+    "data_provider": "finnhub",  # Options: "finnhub", "twelvedata", or custom registered providers
+                                # "finnhub" - Uses local file-based Finnhub data (default, most reliable)  
+                                # "twelvedata" - Framework for TwelveData API integration (placeholder)
+                                # Custom providers can be registered via DataProviderFactory.register_provider()
     # LLM settings
     "llm_provider": "openai",
     "deep_think_llm": "o4-mini",

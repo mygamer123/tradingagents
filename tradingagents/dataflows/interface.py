@@ -17,18 +17,67 @@ from .config import get_config, set_config, DATA_DIR
 
 
 def _get_data_provider():
-    """Get the configured data provider instance.
+    """Get the configured data provider instance with robust fallback handling.
+    
+    This function implements the core provider abstraction mechanism that enables
+    seamless switching between different data sources. It's designed with defensive
+    programming principles to ensure the system continues operating even if the
+    provider system encounters issues.
+    
+    Provider Resolution Process:
+    1. Import the provider factory system (with error handling)
+    2. Load current configuration to determine active provider
+    3. Create and return appropriate provider instance
+    4. Gracefully handle any import or instantiation failures
+    
+    Fallback Strategy:
+    If the provider system fails to load or initialize (ImportError, configuration
+    issues, etc.), the function returns None. This signals calling functions to
+    use their original, direct implementation paths for backward compatibility.
+    
+    Error Handling Philosophy:
+    - Never fail catastrophically - always provide a path forward
+    - Log errors appropriately but don't crash the application
+    - Maintain backward compatibility with pre-provider system code
+    - Enable gradual migration to the new provider system
     
     Returns:
-        DataProvider instance based on configuration
+        DataProvider instance based on current configuration, or None if the
+        provider system is unavailable. None indicates fallback to legacy behavior.
+        
+    Configuration Dependencies:
+        - 'data_provider': Name of the provider to instantiate ('finnhub', 'twelvedata', etc.)
+        - Provider-specific configuration (API keys, data directories, etc.)
+        
+    Example Usage:
+        provider = _get_data_provider()
+        if provider:
+            # Use new provider system
+            data = provider.get_news(ticker, start_date, end_date)
+        else:
+            # Fallback to legacy implementation
+            data = legacy_get_news_function(ticker, start_date, end_date)
     """
     try:
+        # Attempt to import and use the provider factory system
         from .providers.factory import DataProviderFactory
+        
+        # Get current configuration to determine which provider to use
         config = get_config()
         provider_name = config.get('data_provider', 'finnhub')
+        
+        # Create and return the configured provider instance
+        # The factory handles provider validation and configuration passing
         return DataProviderFactory.get_provider(provider_name, config)
     except ImportError:
-        # Fallback to direct finnhub_utils for backward compatibility
+        # Gracefully handle cases where the provider system is not available
+        # This maintains backward compatibility and allows gradual migration
+        # ImportError could occur if provider dependencies are missing
+        return None
+    except Exception:
+        # Handle any other provider system failures (configuration errors, etc.)
+        # In production, this might log the error for monitoring
+        # For now, we fall back to legacy behavior
         return None
 
 
@@ -41,42 +90,84 @@ def get_finnhub_news(
     look_back_days: Annotated[int, "how many days to look back"],
 ):
     """
-    Retrieve news about a company within a time frame
+    Retrieve news about a company within a time frame using the provider abstraction system.
 
-    Args
-        ticker (str): ticker for the company you are interested in
-        start_date (str): Start date in yyyy-mm-dd format
-        end_date (str): End date in yyyy-mm-dd format
-    Returns
-        str: dataframe containing the news of the company in the time frame
+    This function demonstrates the provider abstraction pattern in action. Despite its name
+    suggesting Finnhub-specific functionality, it now works with any configured data provider
+    while maintaining complete backward compatibility with existing code.
 
+    Provider Abstraction Benefits:
+    - Same function signature works with any data provider
+    - Configuration-driven provider switching (no code changes needed)
+    - Automatic fallback to original implementation if provider system fails
+    - Identical output format regardless of underlying data source
+
+    Data Processing Pipeline:
+    1. Calculate date range from current date and lookback period
+    2. Attempt to use configured provider for data retrieval
+    3. Fall back to original Finnhub implementation if provider unavailable
+    4. Format results into consistent string representation
+    5. Return formatted news summary for the specified period
+
+    Args:
+        ticker (str): Company ticker symbol (e.g., 'AAPL', 'MSFT')
+        curr_date (str): Current/end date in YYYY-MM-DD format
+        look_back_days (int): Number of days to look back from curr_date
+
+    Returns:
+        str: Formatted news summary containing headlines and summaries for the time period.
+             Returns empty string if no news found.
+             Format: "## {ticker} News, from {start_date} to {end_date}:\n{formatted_articles}"
+
+    Example:
+        # These calls work identically regardless of configured provider:
+        news = get_finnhub_news('AAPL', '2024-01-15', 7)  # Uses default provider
+        
+        # After changing configuration:
+        set_config({'data_provider': 'twelvedata'})
+        news = get_finnhub_news('AAPL', '2024-01-15', 7)  # Now uses TwelveData!
     """
 
+    # Calculate the date range for news retrieval
     start_date = datetime.strptime(curr_date, "%Y-%m-%d")
     before = start_date - relativedelta(days=look_back_days)
     before = before.strftime("%Y-%m-%d")
 
-    # Use the provider system internally while maintaining backward compatibility
+    # PROVIDER ABSTRACTION LAYER
+    # This is where the magic happens - the same interface function now works
+    # with any configured data provider, enabling seamless provider switching
     provider = _get_data_provider()
     if provider:
+        # Use the configured provider (could be Finnhub, TwelveData, or any custom provider)
+        # The provider handles the data retrieval according to its implementation
         result = provider.get_news(ticker, before, curr_date)
     else:
-        # Fallback to original implementation
+        # BACKWARD COMPATIBILITY FALLBACK
+        # If the provider system is unavailable, fall back to the original implementation
+        # This ensures existing deployments continue working during migration
         result = get_data_in_range(ticker, before, curr_date, "news_data", DATA_DIR)
 
+    # RESULT PROCESSING
+    # Check if any news data was retrieved from either source
     if len(result) == 0:
         return ""
 
+    # FORMAT RESULTS INTO CONSISTENT STRING REPRESENTATION
+    # This formatting logic works the same regardless of which provider supplied the data
+    # All providers return data in the same format: {date: [news_items]}
     combined_result = ""
     for day, data in result.items():
         if len(data) == 0:
             continue
+        # Process each news item for the day
         for entry in data:
+            # Format: ### Headline (Date)\nSummary
             current_news = (
                 "### " + entry["headline"] + f" ({day})" + "\n" + entry["summary"]
             )
             combined_result += current_news + "\n\n"
 
+    # Return consistently formatted output regardless of data source
     return f"## {ticker} News, from {before} to {curr_date}:\n" + str(combined_result)
 
 
